@@ -35,7 +35,24 @@ class DBTable:
         return count
 
     def insert_record(self, values: Dict[str, Any]) -> None:
-        raise NotImplementedError
+        if None == values.get(self.key_field_name):
+            raise ValueError
+        file_name = open(f'{self.name}.db')
+        try:
+            file_name[self.name][values[self.key_field_name]] = dict
+            for dbfield in self.fields:
+                field = dbfield.name
+                if field == self.key_field_name:
+                    continue
+                file_name[self.name][values[self.key_field_name]][field] = values[field] if values.get(field) else None
+                values.pop(field)
+            if 1 < len(values):
+                self.delete_record(values[self.key_field_name])
+                file_name.close()
+                raise ValueError
+
+        finally:
+            file_name.close()
 
     def delete_record(self, key: Any) -> None:
         raise NotImplementedError
@@ -68,7 +85,7 @@ class DataBase:
 
         file_name = shelve.open(f'{table_name}.db', writeback=True)
         try:
-            file_name[table_name] = {}
+            file_name[table_name] = dict
         finally:
             file_name.close()
         return DBTable(table_name, fields, key_field_name)
