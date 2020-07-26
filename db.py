@@ -55,7 +55,15 @@ class DBTable:
             file_name.close()
 
     def delete_record(self, key: Any) -> None:
-        raise NotImplementedError
+        file_name = open(f'{self.name}.db')
+        try:
+            if file_name[self.name].get(key):
+                file_name[self.name].pop(key)
+            else:
+                file_name.close()
+                raise ValueError
+        finally:
+            file_name.close()
 
     def delete_records(self, criteria: List[SelectionCriteria]) -> None:
         raise NotImplementedError
