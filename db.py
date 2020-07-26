@@ -35,10 +35,13 @@ class DBTable:
         return count
 
     def insert_record(self, values: Dict[str, Any]) -> None:
-        if None == values.get(self.key_field_name):
+        if None == values.get(self.key_field_name):  # there is no primary key
             raise ValueError
         file_name = open(f'{self.name}.db')
         try:
+            if file_name[self.name].get(values[self.key_field_name]):  # record already exists
+                file_name.close()
+                raise ValueError
             file_name[self.name][values[self.key_field_name]] = dict
             for dbfield in self.fields:
                 field = dbfield.name
@@ -46,7 +49,7 @@ class DBTable:
                     continue
                 file_name[self.name][values[self.key_field_name]][field] = values[field] if values.get(field) else None
                 values.pop(field)
-            if 1 < len(values):
+            if 1 < len(values):  # insert unnecessary fields
                 self.delete_record(values[self.key_field_name])
                 file_name.close()
                 raise ValueError
