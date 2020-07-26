@@ -27,7 +27,7 @@ class DBTable:
     key_field_name: str
 
     def count(self) -> int:
-        file_name = open(f'{self.name}.db')
+        file_name = shelve.open(f'{self.name}.db')
         try:
             count = len(file_name[self.name].keys())
         finally:
@@ -37,7 +37,7 @@ class DBTable:
     def insert_record(self, values: Dict[str, Any]) -> None:
         if None == values.get(self.key_field_name):  # there is no primary key
             raise ValueError
-        file_name = open(f'{self.name}.db')
+        file_name = shelve.open(f'{self.name}.db')
         try:
             if file_name[self.name].get(values[self.key_field_name]):  # record already exists
                 file_name.close()
@@ -58,7 +58,7 @@ class DBTable:
             file_name.close()
 
     def delete_record(self, key: Any) -> None:
-        file_name = open(f'{self.name}.db')
+        file_name = shelve.open(f'{self.name}.db')
         try:
             if file_name[self.name].get(key):
                 file_name[self.name].pop(key)
@@ -69,7 +69,19 @@ class DBTable:
             file_name.close()
 
     def delete_records(self, criteria: List[SelectionCriteria]) -> None:
-        raise NotImplementedError
+        file_name = shelve.open(f'{self.name}.db')
+        try:
+            for row in file_name[self.name]:
+                for criterion in criteria:
+                    # אם התנאי הוא על המפתח ???
+                    if self.__is_condition_hold(file_name, row, criterion) is False:
+                        break
+                else:
+                    self.delete_record(row)
+
+
+        finally:
+            file_name.close()
 
     def get_record(self, key: Any) -> Dict[str, Any]:
         raise NotImplementedError
@@ -83,6 +95,10 @@ class DBTable:
 
     def create_index(self, field_to_index: str) -> None:
         raise NotImplementedError
+
+    def __is_condition_hold(self,file_name: shelve.DbfilenameShelf, key: Any, criterion: SelectionCriteria) -> bool:
+        file_name[self.name].values()[criterion.field_name]
+        return True
 
 
 @dataclass_json
