@@ -88,7 +88,7 @@ class DBTable(db_api.DBTable):
         path_file = os.path.join('db_files', self.name + '.db')
         file_name = shelve.open(path_file, writeback=True)
         try:
-            if None == file_name[self.name].get(key):
+            if None == file_name[self.name].get(key):  # if this key is'nt exist
                 file_name.close()
                 raise ValueError
             row = file_name[self.name][key]
@@ -98,7 +98,29 @@ class DBTable(db_api.DBTable):
         return row
 
     def update_record(self, key: Any, values: Dict[str, Any]) -> None:
-        raise NotImplementedError
+        path_file = os.path.join('db_files', self.name + '.db')
+        file_name = shelve.open(path_file, writeback=True)
+        try:
+            if None == file_name[self.name].get(key):  # if this key is'nt exist
+                file_name.close()
+                raise ValueError
+            updated_row = {}
+            for dbfield in self.fields:
+                field = dbfield.name
+                if values.get(field) == self.key_field_name:  # cannot update the primary key
+                    file_name.close()
+                    raise ValueError
+                if values.get(field):
+                    updated_row[field] = values[field]
+                    values.pop(field)
+                else:
+                    updated_row[field] = file_name[self.name][key][field]
+            if values:  # insert unnecessary fields
+                file_name.close()
+                raise ValueError
+            file_name[self.name][key] = updated_row
+        finally:
+            file_name.close()
 
     def query_table(self, criteria: List[SelectionCriteria]) \
             -> List[Dict[str, Any]]:
@@ -121,7 +143,7 @@ class DataBase(db_api.DataBase):
                      table_name: str,
                      fields: List[DBField],
                      key_field_name: str) -> DBTable:
-        if self.db_tables.get(table_name):  # if this table name already exist
+        if DataBase.db_tables.get(table_name):  # if this table name already exist
             raise ValueError
         path_file = os.path.join('db_files', table_name + '.db')
         file_name = shelve.open(path_file, writeback=True)
@@ -130,21 +152,21 @@ class DataBase(db_api.DataBase):
         finally:
             file_name.close()
         new_table = DBTable(table_name, fields, key_field_name)
-        self.db_tables[table_name] = new_table
+        DataBase.db_tables[table_name] = new_table
         return new_table
 
     def num_tables(self) -> int:
-        return len(self.db_tables)
+        return len(DataBase.db_tables)
 
     def get_table(self, table_name: str) -> DBTable:
-        if self.db_tables.get(table_name):
-            return self.db_tables[table_name]
+        if DataBase.db_tables.get(table_name):
+            return DataBase.db_tables[table_name]
         raise ValueError
 
     def delete_table(self, table_name: str) -> None:
-        if None == self.db_tables.get(table_name):
+        if None == DataBase.db_tables.get(table_name):
             raise ValueError
-        self.db_tables.pop(table_name)
+        DataBase.db_tables.pop(table_name)
         shelve_file = (os.path.join('db_files', table_name + ".db.bak"))
         os.remove(shelve_file)
         shelve_file = (os.path.join('db_files', table_name + ".db.dat"))
@@ -153,7 +175,7 @@ class DataBase(db_api.DataBase):
         os.remove(shelve_file)
 
     def get_tables_names(self) -> List[Any]:
-        return [table for table in self.db_tables.keys()]
+        return [table for table in DataBase.db_tables.keys()]
 
     def query_multiple_tables(
             self,
