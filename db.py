@@ -67,6 +67,7 @@ class DBTable(db_api.DBTable):
         finally:
             file_name.close()
 
+    # not completed
     def delete_records(self, criteria: List[SelectionCriteria]) -> None:
         path_file = os.path.join('db_files', self.name + '.db')
         file_name = shelve.open(path_file, writeback=True)
@@ -84,7 +85,17 @@ class DBTable(db_api.DBTable):
             file_name.close()
 
     def get_record(self, key: Any) -> Dict[str, Any]:
-        raise NotImplementedError
+        path_file = os.path.join('db_files', self.name + '.db')
+        file_name = shelve.open(path_file, writeback=True)
+        try:
+            if None == file_name[self.name].get(key):
+                file_name.close()
+                raise ValueError
+            row = file_name[self.name][key]
+        finally:
+            file_name.close()
+        row[self.key_field_name] = key
+        return row
 
     def update_record(self, key: Any, values: Dict[str, Any]) -> None:
         raise NotImplementedError
