@@ -65,22 +65,10 @@ class DBTable(db_api.DBTable):
             file_name.close()
 
     def delete_records(self, criteria: List[SelectionCriteria]) -> None:
-        path_file = os.path.join('db_files', self.name + '.db')
-        file_name = shelve.open(path_file, writeback=True)
-        try:
-            for row in file_name[self.name]:
-                for criterion in criteria:
-                    if file_name[self.name][row].get(criterion.field_name) is None:  # if this key is'nt exist
-                        raise ValueError
-                    if criterion.field_name == self.key_field_name:  # if the condition is on the primary key
-                        if self.__is_condition_hold({criterion.field_name: row}, criterion) is False:
-                            break
-                    if self.__is_condition_hold(file_name, row, criterion) is False:
-                        break
-                else:
-                    self.delete_record(row)
-        finally:
-            file_name.close()
+        list_to_delete = self.query_table(criteria)
+        for row in list_to_delete:
+            key = row[self.key_field_name]
+            self.delete_record(key)
 
     def get_record(self, key: Any) -> Dict[str, Any]:
         path_file = os.path.join('db_files', self.name + '.db')
