@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import Any, Dict, List, Type
-import test_db
 import db_api
 import shelve
 import os
@@ -132,7 +131,15 @@ class DataBase(db_api.DataBase):
         raise ValueError
 
     def delete_table(self, table_name: str) -> None:
-        raise NotImplementedError
+        if None == self.db_tables.get(table_name):
+            raise ValueError
+        self.db_tables.pop(table_name)
+        shelve_file = (os.path.join('db_files', table_name + ".db.bak"))
+        os.remove(shelve_file)
+        shelve_file = (os.path.join('db_files', table_name + ".db.dat"))
+        os.remove(shelve_file)
+        shelve_file = (os.path.join('db_files', table_name + ".db.dir"))
+        os.remove(shelve_file)
 
     def get_tables_names(self) -> List[Any]:
         return [table for table in self.db_tables.keys()]
