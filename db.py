@@ -56,6 +56,9 @@ class DBTable(db_api.DBTable):
             if 1 < len(values):  # insert unnecessary fields
                 self.delete_record(values[self.key_field_name])
                 raise ValueError
+            for field in file_name["hash_index"]:  # update hash_index
+                if values[field]:
+                    file_name["hash_index"][field] = values[field]
         finally:
             file_name.close()
 
@@ -63,6 +66,9 @@ class DBTable(db_api.DBTable):
         path_file = os.path.join('db_files', self.name + '.db')
         file_name = shelve.open(path_file, writeback=True)
         try:
+            for field in file_name["hash_index"]:  # update hash_index
+                if file_name[self.name][key][field]:
+                    file_name["hash_index"][field].remove(key)
             if file_name[self.name].get(key):
                 file_name[self.name].pop(key)
             else:
