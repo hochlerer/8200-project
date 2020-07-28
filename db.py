@@ -23,6 +23,12 @@ class SelectionCriteria(db_api.SelectionCriteria):
 @dataclass_json
 @dataclass
 class DBTable(db_api.DBTable):
+    # def __init__(self, name: str, fields: List[DBField], key_field_name: str):
+    #     self.name = name
+    #     self.fields = fields
+    #     self.key_field_name = key_field_name
+    #     self.hash_index = []
+
     def count(self) -> int:
         path_file = os.path.join('db_files', self.name + '.db')
         file_name = shelve.open(path_file, writeback=True)
@@ -50,7 +56,6 @@ class DBTable(db_api.DBTable):
             if 1 < len(values):  # insert unnecessary fields
                 self.delete_record(values[self.key_field_name])
                 raise ValueError
-
         finally:
             file_name.close()
 
@@ -112,6 +117,14 @@ class DBTable(db_api.DBTable):
         file_name = shelve.open(path_file, writeback=True)
         try:
             desired_rows = []
+            for criterion in criteria:
+                if criterion.field_name == self.key_field_name and criterion.operator == "=":
+                    if file_name[self.name].get(criterion.value):
+                        result = file_name[self.name][criterion.value]
+                        result[self.key_field_name] = criterion.value
+                        return [result]
+                    return []
+
             for row in file_name[self.name]:
                 for criterion in criteria:
                     if criterion.field_name == self.key_field_name:  # if the condition is on the primary key
@@ -130,7 +143,28 @@ class DBTable(db_api.DBTable):
         return desired_rows
 
     def create_index(self, field_to_index: str) -> None:
-        raise NotImplementedError
+        if field_to_index == self.key_field_name:  # No need to index the primary key
+            return
+        path_file = os.path.join('db_files', self.name + '.db')
+        file_name = shelve.open(path_file, writeback=True)
+        try:
+            for row in file_name[self.name]:  # if the field_to_index isn't exist. just one iteration
+                if file_name[self.name][row].get(field_to_index) is None:
+                    raise ValueError
+                break
+            file_name["hash_index"] = {}
+            file_name["hash_index"][field_to_index] = {}
+            for row in file_name[self.name]:
+                value = file_name[self.name][row][field_to_index]
+                if value is None:
+                    continue
+                if file_name["hash_index"][field_to_index].get(value):
+                    file_name["hash_index"][field_to_index][value].append(row)
+                else:
+                    file_name["hash_index"][field_to_index][value] = row
+
+        finally:
+            file_name.close()
 
     def __is_condition_hold(self, data: Dict[Any, Any] , criterion: SelectionCriteria) -> bool:
         if data[criterion.field_name] is None:
@@ -156,6 +190,7 @@ class DataBase(db_api.DataBase):
     db_tables = {}
     # Put here any instance information needed to support the API
 
+    # add indexes
     def __init__(self):
         path_file = os.path.join('db_files', 'DataBase.db')
         file_name = shelve.open(path_file, writeback=True)
