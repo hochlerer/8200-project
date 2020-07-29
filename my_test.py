@@ -36,5 +36,9 @@ def test_create_index():
     add_student(students, 145635, Birthday="hkl")
     Students_index.delete_record(1_000_000 + 1435)
     Students_index.update_record(1_000_000 + 123, {"Birthday" : "aaa"})
+    criterion1 = SelectionCriteria("Birthday" , "=" ,"aaa")
+    criterion2 = SelectionCriteria("ID", "=", 1_000_000 + 123)
+    a1 = Students_index.query_table([criterion1, criterion2])
+    print(a1)
     db.delete_table('Students_index')
 
