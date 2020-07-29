@@ -138,7 +138,6 @@ class DBTable(db_api.DBTable):
         path_file = os.path.join('db_files', self.name + '.db')
         file_name = shelve.open(path_file, writeback=True)
         try:
-            desired_rows = []
             for criterion in criteria:  # If the criterion is on the key
                 if criterion.field_name == self.key_field_name and criterion.operator == "=":
                     if file_name[self.name].get(criterion.value):
@@ -147,20 +146,32 @@ class DBTable(db_api.DBTable):
                         return [result]
                     return []
 
-            # indexes = []
-            # for i in range(len(self.hash_index)):
-            #     if self.hash_index[i]:
-            #         for criterion in criteria:
-            #             if self.fields[i].name == criterion.field_name and criterion.operator == "=":
-            #                 path_index_file = os.path.join('db_files', f'{self.name}_{self.fields[i].name}_hash_index.db')
-            #                 index_file = shelve.open(path_index_file, writeback=True)
-            #                 indexes = index_file[criterion.value]
-            #                 index_file.close()
-            #
-            # if indexes:
-            #     for i in indexes:
-
-
+            indexes = []
+            for i in range(len(self.hash_index)):  # If the criterion is on a field that has an index
+                if self.hash_index[i]:
+                    if indexes:
+                        break
+                    for criterion in criteria:
+                        if self.fields[i].name == criterion.field_name and criterion.operator == "=":
+                            path_index_file = os.path.join('db_files', f'{self.name}_{self.fields[i].name}_hash_index.db')
+                            index_file = shelve.open(path_index_file, writeback=True)
+                            if index_file.get(criterion.value):
+                                indexes = index_file[criterion.value]
+                            index_file.close()
+                            if not indexes:
+                                return []
+                            break
+            desired_rows = []
+            if indexes:
+                for i in indexes:
+                    for criterion in criteria:
+                        if self.__is_condition_hold(file_name[self.name][i], criterion) is False:
+                            break
+                    else:
+                        result = file_name[self.name][i]
+                        result[self.key_field_name] = i
+                        desired_rows.append(result)
+                return desired_rows
 
             for row in file_name[self.name]:
                 for criterion in criteria:
