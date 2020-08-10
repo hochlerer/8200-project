@@ -308,7 +308,7 @@ class DataBase(db_api.DataBase):
         if is_table_exist:
             raise ValueError
         is_key_field_name_exist = True if key_field_name in [field.name for field in fields] else False
-        if is_key_field_name_exist:
+        if not is_key_field_name_exist:
             raise ValueError
 
         path_file = os.path.join('db_files', table_name + '.db')
@@ -318,10 +318,21 @@ class DataBase(db_api.DataBase):
         finally:
             file_name.close()
 
-        self.update_DataBase_file(table_name, fields, key_field_name)
+        self.update_data_base_file(table_name, fields, key_field_name)
         new_table = DBTable(table_name, fields, key_field_name)
         DataBase.db_tables[table_name] = new_table
         return new_table
+
+    def update_data_base_file(self, table_name, fields, key_field_name):
+        path_file = os.path.join('db_files', 'DataBase.db')
+        file_name = shelve.open(path_file, writeback=True)
+        try:
+            file_name[table_name] = {}
+            file_name[table_name]["fields"] = fields
+            file_name[table_name]["key_field_name"] = key_field_name
+            file_name[table_name]["hash_index"] = [False for i in range(len(fields))]
+        finally:
+            file_name.close()
 
     def num_tables(self) -> int:
         return len(DataBase.db_tables)
@@ -368,13 +379,4 @@ class DataBase(db_api.DataBase):
     ) -> List[Dict[str, Any]]:
         raise NotImplementedError
 
-    def update_data_base_file(self, table_name, fields, key_field_name):
-        path_file = os.path.join('db_files', 'DataBase.db')
-        file_name = shelve.open(path_file, writeback=True)
-        try:
-            file_name[table_name] = {}
-            file_name[table_name]["fields"] = fields
-            file_name[table_name]["key_field_name"] = key_field_name
-            file_name[table_name]["hash_index"] = [False for i in range(len(fields))]
-        finally:
-            file_name.close()
+
